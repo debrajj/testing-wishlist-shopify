@@ -1,8 +1,7 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "cd wishlist && npm install && npm run setup && npm run build"
 
 [deploy]
-startCommand = "cd wishlist && npm run start"
+startCommand = "npm run start"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
