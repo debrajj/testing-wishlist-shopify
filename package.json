@@ -1,0 +1,12 @@
+{
+  "name": "wishlist-app-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd wishlist && npm ci --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build",
+    "start": "cd wishlist && npm run start"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

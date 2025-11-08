@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
+
+[phases.install]
+cmds = ["cd wishlist && npm ci --include=dev"]
+
+[phases.build]
+cmds = ["cd wishlist && npx prisma generate && npx prisma migrate deploy && npm run build"]
+
+[start]
+cmd = "cd wishlist && npm run start"
