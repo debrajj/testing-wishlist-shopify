@@ -1,0 +1,114 @@
+{% schema %}
+{
+  "name": "Wishlist Button",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Add to Wishlist"
+    },
+    {
+      "type": "color",
+      "id": "heart_color",
+      "label": "Heart Color",
+      "default": "#ff0000"
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+  .wishlist-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: 2px solid {{ block.settings.heart_color }};
+    background: white;
+    color: {{ block.settings.heart_color }};
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .wishlist-button:hover {
+    background: {{ block.settings.heart_color }};
+    color: white;
+  }
+
+  .wishlist-button.active {
+    background: {{ block.settings.heart_color }};
+    color: white;
+  }
+
+  .wishlist-heart {
+    font-size: 20px;
+    transition: transform 0.3s ease;
+  }
+
+  .wishlist-button:hover .wishlist-heart {
+    transform: scale(1.2);
+  }
+</style>
+
+<button 
+  class="wishlist-button" 
+  id="wishlist-btn-{{ product.id }}"
+  data-product-id="{{ product.id }}"
+  data-customer-id="{{ customer.id }}"
+>
+  <span class="wishlist-heart">❤️</span>
+  <span class="wishlist-text">{{ block.settings.button_text }}</span>
+</button>
+
+<script>
+(function() {
+  const button = document.getElementById('wishlist-btn-{{ product.id }}');
+  const productId = button.dataset.productId;
+  const customerId = button.dataset.customerId;
+
+  if (!customerId) {
+    button.style.display = 'none';
+    return;
+  }
+
+  // Check if product is in wishlist
+  fetch(`/apps/wishlist/api/wishlist/get?customerId=${customerId}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.wishlist && data.wishlist.includes(productId)) {
+        button.classList.add('active');
+        button.querySelector('.wishlist-text').textContent = 'In Wishlist';
+      }
+    });
+
+  button.addEventListener('click', function(e) {
+    e.preventDefault();
+    
+    const isActive = button.classList.contains('active');
+    const endpoint = isActive ? '/apps/wishlist/api/wishlist/remove' : '/apps/wishlist/api/wishlist/add';
+    
+    const formData = new FormData();
+    formData.append('customerId', customerId);
+    formData.append('productId', productId);
+
+    fetch(endpoint, {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        button.classList.toggle('active');
+        button.querySelector('.wishlist-text').textContent = 
+          button.classList.contains('active') ? 'In Wishlist' : '{{ block.settings.button_text }}';
+      }
+    })
+    .catch(err => console.error('Wishlist error:', err));
+  });
+})();
+</script>

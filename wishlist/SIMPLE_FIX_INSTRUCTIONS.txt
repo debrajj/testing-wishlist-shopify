@@ -1,0 +1,35 @@
+SIMPLE FIX - 2 CHANGES ONLY
+================================
+
+Your button opens product page because onclick is missing event.stopPropagation()
+
+CHANGE 1: Update Button (Line ~60)
+-----------------------------------
+Find this line:
+  onclick="toggleWishlist(this, {{ card_product.id }})"
+
+Replace with:
+  onclick="event.stopPropagation(); event.preventDefault(); toggleWishlist(this, {{ card_product.id }}); return false;"
+
+
+CHANGE 2: Update Script (Line ~500)
+------------------------------------
+Find the <script> section at the end
+
+Replace the entire <script>...</script> with the script from FINAL-FIXED-card-product.liquid
+
+
+THAT'S IT!
+==========
+After these 2 changes:
+- Clicking heart won't open product page
+- Wishlist will save to backend
+- Dashboard will update in real-time
+
+Test:
+1. Save file
+2. Clear cache (Cmd+Shift+R)
+3. Log in as customer
+4. Click heart icon
+5. Check browser console (F12) for debug messages
+6. Refresh dashboard to see count update

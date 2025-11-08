@@ -1,0 +1,99 @@
+{%- comment -%}
+===========================================
+REPLACE YOUR ENTIRE <script> SECTION WITH THIS
+===========================================
+
+Find the <script> section at the end of your card-product.liquid
+Delete everything from <script> to </script>
+Then paste this entire code block
+===========================================
+{%- endcomment -%}
+
+{%- comment -%} Wishlist JavaScript - Connected to Your App {%- endcomment -%}
+<script>
+(function() {
+  const customerId = {{ customer.id | json }};
+  
+  if (!customerId) {
+    // Hide wishlist buttons for non-logged-in users
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+      btn.style.display = 'none';
+    });
+    return;
+  }
+
+  function initWishlist() {
+    const buttons = document.querySelectorAll('.wishlist-btn:not([data-init])');
+    
+    buttons.forEach(btn => {
+      btn.setAttribute('data-init', '1');
+      const productId = btn.getAttribute('data-product-id');
+      
+      // Check if product is already in wishlist
+      fetch('/apps/wishlist/api/wishlist/get?customerId=' + customerId)
+        .then(r => r.json())
+        .then(d => {
+          if (d.wishlist && d.wishlist.includes(productId)) {
+            btn.classList.add('active');
+            btn.setAttribute('aria-label', btn.getAttribute('aria-label').replace('Add', 'Remove'));
+          }
+        })
+        .catch(err => console.error('Wishlist check error:', err));
+    });
+  }
+  
+  // Make toggleWishlist function global so onclick can access it
+  window.toggleWishlist = function(btn, productId) {
+    const isActive = btn.classList.contains('active');
+    const endpoint = isActive 
+      ? '/apps/wishlist/api/wishlist/remove' 
+      : '/apps/wishlist/api/wishlist/add';
+    
+    // Optimistic UI update
+    btn.classList.toggle('active');
+    btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('customerId', customerId);
+    formData.append('productId', productId);
+    
+    fetch(endpoint, { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          // Update aria-label
+          if (btn.classList.contains('active')) {
+            btn.setAttribute('aria-label', btn.getAttribute('aria-label').replace('Add', 'Remove'));
+          } else {
+            btn.setAttribute('aria-label', btn.getAttribute('aria-label').replace('Remove', 'Add'));
+          }
+        } else {
+          // Revert on failure
+          btn.classList.toggle('active');
+        }
+        btn.disabled = false;
+      })
+      .catch(err => {
+        console.error('Wishlist error:', err);
+        // Revert on error
+        btn.classList.toggle('active');
+        btn.disabled = false;
+      });
+  };
+  
+  // Initialize on page load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWishlist);
+  } else {
+    initWishlist();
+  }
+  
+  // Re-initialize for dynamically loaded products
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(function() {
+      initWishlist();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+})();
+</script>

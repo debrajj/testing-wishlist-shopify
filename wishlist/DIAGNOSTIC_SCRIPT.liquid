@@ -1,0 +1,73 @@
+{% comment %}
+  DIAGNOSTIC SCRIPT - Add this temporarily to your theme to debug wishlist
+  
+  Add this to your theme.liquid file, just before </body>
+  
+  This will show you:
+  - If customer is logged in
+  - What customer ID is being used
+  - If API calls are working
+  - Any errors that occur
+{% endcomment %}
+
+<div id="wishlist-debug" style="position: fixed; bottom: 10px; right: 10px; background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; max-width: 400px; z-index: 9999; border-radius: 5px; max-height: 300px; overflow-y: auto;">
+  <div style="color: #fff; font-weight: bold; margin-bottom: 5px;">Wishlist Debug Console</div>
+  <div id="debug-log"></div>
+  <button onclick="document.getElementById('wishlist-debug').style.display='none'" style="margin-top: 5px; padding: 2px 5px; font-size: 10px;">Close</button>
+</div>
+
+<script>
+(function() {
+  const debugLog = document.getElementById('debug-log');
+  
+  function log(msg, color = '#0f0') {
+    const time = new Date().toLocaleTimeString();
+    const div = document.createElement('div');
+    div.style.color = color;
+    div.textContent = time + ' - ' + msg;
+    debugLog.insertBefore(div, debugLog.firstChild);
+  }
+  
+  // Check customer status
+  const customerId = {{ customer.id | json }};
+  if (customerId) {
+    log('✅ Customer logged in: ' + customerId, '#0f0');
+  } else {
+    log('⚠️ No customer logged in (using localStorage)', '#ff0');
+  }
+  
+  // Intercept fetch calls
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    const url = args[0];
+    if (url.includes('wishlist')) {
+      log('📡 API Call: ' + url, '#0ff');
+    }
+    
+    return originalFetch.apply(this, args)
+      .then(response => {
+        if (url.includes('wishlist')) {
+          log('✅ Response: ' + response.status, response.ok ? '#0f0' : '#f00');
+        }
+        return response;
+      })
+      .catch(error => {
+        if (url.includes('wishlist')) {
+          log('❌ Error: ' + error.message, '#f00');
+        }
+        throw error;
+      });
+  };
+  
+  // Log when wishlist buttons are clicked
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.wishlist-btn')) {
+      const btn = e.target.closest('.wishlist-btn');
+      const productId = btn.getAttribute('data-product-id');
+      log('💗 Wishlist clicked: Product ' + productId, '#f0f');
+    }
+  }, true);
+  
+  log('🚀 Debug console ready', '#fff');
+})();
+</script>

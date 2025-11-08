@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wishlist Button Test</title>
+  <style>
+    .test-card {
+      width: 300px;
+      height: 400px;
+      border: 1px solid #ccc;
+      position: relative;
+      margin: 50px;
+    }
+    .wishlist-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      z-index: 2;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .wishlist-btn svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    .wishlist-icon-outline {
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+    }
+    .wishlist-icon-filled {
+      fill: #e11d48;
+      stroke: #e11d48;
+      stroke-width: 2;
+      display: none;
+    }
+    .wishlist-btn.active .wishlist-icon-outline {
+      display: none;
+    }
+    .wishlist-btn.active .wishlist-icon-filled {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>Wishlist Button Test</h1>
+  <p>Click the heart icon. It should NOT navigate anywhere.</p>
+  
+  <a href="https://example.com/product" class="test-card">
+    <button 
+      type="button"
+      class="wishlist-btn" 
+      data-product-id="123456"
+      onclick="event.stopPropagation(); event.preventDefault(); toggleWishlist(this, 123456); return false;">
+      <svg class="wishlist-icon-outline" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+      </svg>
+      <svg class="wishlist-icon-filled" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+      </svg>
+    </button>
+    <p style="padding: 60px 20px;">Click anywhere on this card to go to product page. Click the heart to toggle wishlist.</p>
+  </a>
+
+  <div id="log"></div>
+
+  <script>
+    const customerId = 123; // Fake customer ID for testing
+    
+    window.toggleWishlist = function(btn, productId) {
+      console.log('Toggle wishlist clicked:', productId);
+      document.getElementById('log').innerHTML += '<p>✅ Wishlist clicked! Product: ' + productId + '</p>';
+      
+      btn.classList.toggle('active');
+      
+      // Simulate API call
+      console.log('Would send to API:', '/apps/wishlist/api/wishlist/add');
+      document.getElementById('log').innerHTML += '<p>📡 API call would be made here</p>';
+    };
+  </script>
+</body>
+</html>

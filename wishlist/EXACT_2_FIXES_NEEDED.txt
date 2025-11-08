@@ -1,0 +1,135 @@
+====================================
+ONLY 2 LINES TO CHANGE IN YOUR CODE
+====================================
+
+FIX #1: Line ~60 (The Button)
+------------------------------
+FIND THIS LINE:
+  onclick="toggleWishlist(this, {{ card_product.id }})"
+
+CHANGE TO:
+  onclick="event.stopPropagation(); event.preventDefault(); toggleWishlist(this, {{ card_product.id }}); return false;"
+
+
+FIX #2: Line ~500+ (The Script)
+--------------------------------
+FIND THIS SECTION (at the very end):
+  <script>
+  (function() {
+    const customerId = {{ customer.id | json }};
+    
+    function initWishlist() {
+      const buttons = document.querySelectorAll('.wishlist-btn:not([data-init])');
+      
+      buttons.forEach(btn => {
+        btn.setAttribute('data-init', '1');
+        const productId = btn.getAttribute('data-product-id');
+        
+        if (customerId) {
+          // Logged-in customer - use backend
+          fetch('/apps/wishlist/api/wishlist/get?customerId=' + customerId)
+            .then(r => r.json())
+            .then(d => {
+              if (d.wishlist && d.wishlist.includes(productId)) {
+                btn.classList.add('active');
+              }
+            })
+            .catch(err => console.error('Wishlist check error:', err));
+        } else {
+          // Guest - use localStorage
+          let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+          if (wishlist.includes(parseInt(productId))) {
+            btn.classList.add('active');
+          }
+        }
+      });
+    }
+
+REPLACE WITH:
+  <script>
+  (function() {
+    const customerId = {{ customer.id | json }};
+    
+    if (!customerId) {
+      document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        btn.style.display = 'none';
+      });
+      return;
+    }
+
+    function initWishlist() {
+      const buttons = document.querySelectorAll('.wishlist-btn:not([data-init])');
+      
+      buttons.forEach(btn => {
+        btn.setAttribute('data-init', '1');
+        const productId = btn.getAttribute('data-product-id');
+        
+        fetch('/apps/wishlist/api/wishlist/get?customerId=' + customerId)
+          .then(r => r.json())
+          .then(d => {
+            if (d.wishlist && d.wishlist.includes(productId)) {
+              btn.classList.add('active');
+            }
+          })
+          .catch(err => console.error('Wishlist check error:', err));
+      });
+    }
+
+    window.toggleWishlist = function(btn, productId) {
+      console.log('Toggle wishlist clicked:', productId);
+      
+      const isActive = btn.classList.contains('active');
+      const endpoint = isActive 
+        ? '/apps/wishlist/api/wishlist/remove' 
+        : '/apps/wishlist/api/wishlist/add';
+      
+      btn.classList.toggle('active');
+      btn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('customerId', customerId);
+      formData.append('productId', productId);
+      
+      console.log('Sending to:', endpoint, 'Customer:', customerId);
+      
+      fetch(endpoint, { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(d => {
+          console.log('Response:', d);
+          if (!d.success) {
+            btn.classList.toggle('active');
+            console.error('Failed:', d.error);
+          }
+          btn.disabled = false;
+        })
+        .catch(err => {
+          console.error('Wishlist error:', err);
+          btn.classList.toggle('active');
+          btn.disabled = false;
+        });
+    };
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initWishlist);
+    } else {
+      initWishlist();
+    }
+    
+    if (typeof MutationObserver !== 'undefined') {
+      const observer = new MutationObserver(function() {
+        initWishlist();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+  })();
+  </script>
+
+
+THAT'S IT! ONLY THESE 2 CHANGES NEEDED!
+========================================
+
+After making these changes:
+✅ Heart icon won't open product page
+✅ Clicks will save to backend
+✅ Dashboard will update
+✅ Console will show debug messages

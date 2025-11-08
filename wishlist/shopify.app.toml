@@ -1,0 +1,32 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "707e246249e4d4158b01f267379e3c74"
+name = "wishlist-test"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2026-01"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_products,write_customers,write_products"
+
+[auth]
+redirect_urls = [ "https://example.com/api/auth" ]
+
+# [app_proxy]
+# url = "https://YOUR-PRODUCTION-URL.com"
+# subpath = "wishlist"
+# prefix = "apps"

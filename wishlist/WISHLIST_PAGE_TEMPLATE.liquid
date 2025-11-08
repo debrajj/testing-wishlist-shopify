@@ -1,0 +1,273 @@
+{% comment %}
+  Wishlist Page Template
+  Create this as a new page template in your theme: templates/page.wishlist.liquid
+{% endcomment %}
+
+<div class="wishlist-page">
+  <div class="page-width">
+    <div class="wishlist-header">
+      <h1 class="wishlist-title">My Wishlist</h1>
+      <p class="wishlist-count" id="wishlist-count">Loading...</p>
+    </div>
+
+    <div class="wishlist-content" id="wishlist-content">
+      <div class="wishlist-loading">
+        <p>Loading your wishlist...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .wishlist-page {
+    padding: 2rem 0;
+  }
+  
+  .wishlist-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  
+  .wishlist-title {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .wishlist-count {
+    font-size: 1.1rem;
+    color: #666;
+  }
+  
+  .wishlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+  
+  .wishlist-item {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: white;
+  }
+  
+  .wishlist-item-image {
+    width: 100%;
+    height: 250px;
+    object-fit: cover;
+  }
+  
+  .wishlist-item-content {
+    padding: 1rem;
+  }
+  
+  .wishlist-item-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .wishlist-item-price {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 1rem;
+  }
+  
+  .wishlist-item-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .wishlist-remove-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  
+  .wishlist-add-to-cart-btn {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    flex: 1;
+  }
+  
+  .wishlist-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+  
+  .wishlist-empty h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: #666;
+  }
+  
+  .wishlist-empty p {
+    color: #888;
+    margin-bottom: 2rem;
+  }
+  
+  .continue-shopping-btn {
+    background: #007bff;
+    color: white;
+    padding: 1rem 2rem;
+    text-decoration: none;
+    border-radius: 4px;
+    display: inline-block;
+  }
+</style>
+
+<script>
+(function() {
+  const customerId = {{ customer.id | json }};
+  
+  if (!customerId) {
+    document.getElementById('wishlist-content').innerHTML = `
+      <div class="wishlist-empty">
+        <h2>Please log in to view your wishlist</h2>
+        <p>You need to be logged in to access your wishlist.</p>
+        <a href="/account/login" class="continue-shopping-btn">Log In</a>
+      </div>
+    `;
+    return;
+  }
+
+  // Fetch wishlist data
+  fetch('/apps/wishlist/api/wishlist/page?customerId=' + customerId)
+    .then(response => response.json())
+    .then(data => {
+      const countElement = document.getElementById('wishlist-count');
+      const contentElement = document.getElementById('wishlist-content');
+      
+      if (data.products && data.products.length > 0) {
+        countElement.textContent = `${data.count} item${data.count !== 1 ? 's' : ''} in your wishlist`;
+        
+        const gridHTML = `
+          <div class="wishlist-grid">
+            ${data.products.map(product => `
+              <div class="wishlist-item" data-product-id="${product.id.replace('gid://shopify/Product/', '')}">
+                ${product.featuredImage ? `
+                  <img src="${product.featuredImage.url}" alt="${product.featuredImage.altText || product.title}" class="wishlist-item-image">
+                ` : ''}
+                <div class="wishlist-item-content">
+                  <h3 class="wishlist-item-title">${product.title}</h3>
+                  <div class="wishlist-item-price">
+                    ${product.priceRange.minVariantPrice.currencyCode} ${parseFloat(product.priceRange.minVariantPrice.amount).toFixed(2)}
+                  </div>
+                  <div class="wishlist-item-actions">
+                    <button class="wishlist-remove-btn" onclick="removeFromWishlist('${product.id.replace('gid://shopify/Product/', '')}')">
+                      Remove
+                    </button>
+                    ${product.availableForSale ? `
+                      <button class="wishlist-add-to-cart-btn" onclick="addToCart('${product.variants.edges[0]?.node.id || ''}')">
+                        Add to Cart
+                      </button>
+                    ` : `
+                      <button class="wishlist-add-to-cart-btn" disabled>
+                        Sold Out
+                      </button>
+                    `}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        
+        contentElement.innerHTML = gridHTML;
+      } else {
+        countElement.textContent = 'Your wishlist is empty';
+        contentElement.innerHTML = `
+          <div class="wishlist-empty">
+            <h2>Your wishlist is empty</h2>
+            <p>Start adding products you love to your wishlist!</p>
+            <a href="/collections/all" class="continue-shopping-btn">Continue Shopping</a>
+          </div>
+        `;
+      }
+    })
+    .catch(error => {
+      console.error('Error loading wishlist:', error);
+      document.getElementById('wishlist-content').innerHTML = `
+        <div class="wishlist-empty">
+          <h2>Error loading wishlist</h2>
+          <p>Please try refreshing the page.</p>
+        </div>
+      `;
+    });
+
+  // Remove from wishlist function
+  window.removeFromWishlist = function(productId) {
+    const formData = new FormData();
+    formData.append('customerId', customerId);
+    formData.append('productId', productId);
+    
+    fetch('/apps/wishlist/api/wishlist/remove', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Remove item from DOM
+        const item = document.querySelector(`[data-product-id="${productId}"]`);
+        if (item) {
+          item.remove();
+        }
+        
+        // Update count
+        const remaining = document.querySelectorAll('.wishlist-item').length;
+        const countElement = document.getElementById('wishlist-count');
+        
+        if (remaining === 0) {
+          countElement.textContent = 'Your wishlist is empty';
+          document.getElementById('wishlist-content').innerHTML = `
+            <div class="wishlist-empty">
+              <h2>Your wishlist is empty</h2>
+              <p>Start adding products you love to your wishlist!</p>
+              <a href="/collections/all" class="continue-shopping-btn">Continue Shopping</a>
+            </div>
+          `;
+        } else {
+          countElement.textContent = `${remaining} item${remaining !== 1 ? 's' : ''} in your wishlist`;
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error removing from wishlist:', error);
+    });
+  };
+
+  // Add to cart function
+  window.addToCart = function(variantId) {
+    const formData = new FormData();
+    formData.append('id', variantId);
+    formData.append('quantity', '1');
+    
+    fetch('/cart/add.js', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Show success message or redirect to cart
+      alert('Product added to cart!');
+    })
+    .catch(error => {
+      console.error('Error adding to cart:', error);
+      alert('Error adding product to cart');
+    });
+  };
+})();
+</script>

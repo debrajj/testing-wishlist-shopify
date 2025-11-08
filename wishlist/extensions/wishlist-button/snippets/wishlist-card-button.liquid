@@ -1,0 +1,210 @@
+{% comment %}
+  Wishlist Button for Product Cards
+  
+  Usage: Add to any product card
+  {% render 'wishlist-card-button', product: product %}
+{% endcomment %}
+
+<style>
+  .wishlist-card-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    z-index: 10;
+  }
+
+  .wishlist-card-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  .wishlist-card-btn.active {
+    background: #ff0000;
+  }
+
+  .wishlist-card-btn .heart-icon {
+    transition: transform 0.3s ease;
+  }
+
+  .wishlist-card-btn:hover .heart-icon {
+    transform: scale(1.2);
+  }
+
+  .wishlist-card-btn.active .heart-icon {
+    filter: brightness(0) invert(1);
+  }
+
+  /* Hide for non-logged-in users */
+  .wishlist-card-btn.hidden {
+    display: none;
+  }
+</style>
+
+<button 
+  class="wishlist-card-btn {% unless customer %}hidden{% endunless %}"
+  data-wishlist-btn
+  data-product-id="{{ product.id }}"
+  data-customer-id="{{ customer.id }}"
+  aria-label="Add to wishlist"
+  title="Add to wishlist"
+>
+  <span class="heart-icon">❤️</span>
+</button>
+
+<script>
+(function() {
+  // Initialize all wishlist buttons on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    initWishlistButtons();
+  });
+
+  // Also initialize when new products are loaded (for infinite scroll, etc.)
+  if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length) {
+          initWishlistButtons();
+        }
+      });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  function initWishlistButtons() {
+    const buttons = document.querySelectorAll('[data-wishlist-btn]:not([data-initialized])');
+    
+    buttons.forEach(function(button) {
+      button.setAttribute('data-initialized', 'true');
+      
+      const productId = button.dataset.productId;
+      const customerId = button.dataset.customerId;
+
+      if (!customerId) {
+        button.classList.add('hidden');
+        return;
+      }
+
+      // Check if product is in wishlist
+      checkWishlistStatus(customerId, productId, button);
+
+      // Add click handler
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleWishlist(button, customerId, productId);
+      });
+    });
+  }
+
+  function checkWishlistStatus(customerId, productId, button) {
+    fetch('/apps/wishlist/api/wishlist/get?customerId=' + customerId)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.wishlist && data.wishlist.includes(productId)) {
+          button.classList.add('active');
+          button.setAttribute('aria-label', 'Remove from wishlist');
+          button.setAttribute('title', 'Remove from wishlist');
+        }
+      })
+      .catch(function(err) {
+        console.error('Error checking wishlist:', err);
+      });
+  }
+
+  function toggleWishlist(button, customerId, productId) {
+    const isActive = button.classList.contains('active');
+    const endpoint = isActive 
+      ? '/apps/wishlist/api/wishlist/remove' 
+      : '/apps/wishlist/api/wishlist/add';
+    
+    // Optimistic UI update
+    button.classList.toggle('active');
+    button.style.pointerEvents = 'none';
+
+    const formData = new FormData();
+    formData.append('customerId', customerId);
+    formData.append('productId', productId);
+
+    fetch(endpoint, {
+      method: 'POST',
+      body: formData
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.success) {
+        // Update aria labels
+        if (button.classList.contains('active')) {
+          button.setAttribute('aria-label', 'Remove from wishlist');
+          button.setAttribute('title', 'Remove from wishlist');
+          showToast('Added to wishlist ❤️');
+        } else {
+          button.setAttribute('aria-label', 'Add to wishlist');
+          button.setAttribute('title', 'Add to wishlist');
+          showToast('Removed from wishlist');
+        }
+        
+        // Update wishlist count in header
+        updateWishlistCount();
+      } else {
+        // Revert on error
+        button.classList.toggle('active');
+      }
+      button.style.pointerEvents = 'auto';
+    })
+    .catch(function(err) {
+      console.error('Wishlist error:', err);
+      // Revert on error
+      button.classList.toggle('active');
+      button.style.pointerEvents = 'auto';
+      showToast('Error updating wishlist');
+    });
+  }
+
+  function updateWishlistCount() {
+    const badge = document.getElementById('wishlist-badge');
+    const customerId = '{{ customer.id }}';
+    
+    if (!badge || !customerId) return;
+
+    fetch('/apps/wishlist/api/wishlist/get?customerId=' + customerId)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        const count = (data.wishlist || []).length;
+        if (count > 0) {
+          badge.textContent = count;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      });
+  }
+
+  function showToast(message) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:white;padding:12px 24px;border-radius:4px;z-index:9999;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+    document.body.appendChild(toast);
+    
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s ease';
+      setTimeout(function() {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 2000);
+  }
+})();
+</script>

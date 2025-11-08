@@ -1,1 +1,0 @@
-# testing-wishlist-shopify
